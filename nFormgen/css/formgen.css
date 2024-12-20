@@ -1,0 +1,45 @@
+/* ******************* CSS for jsForm generator
+// formgen 0.2.11 18 December 2024
+// free to use but no warranties
+// El Condor - Condor Informatique - Turin
+// ********************************************/
+.fg_Buttons {background-color:#acc;}	/* button's row */
+.fg_Button {
+	font-size:10pt;width:80px;height:28px;margin-right:3px;padding:0;
+	background:silver;line-height: 1.25;
+	border:outset;
+}
+/* .fg_Erase {color:blue !important}*/
+.fg_Frame {
+  border: 2px solid silver;
+  margin: 5px;
+  box-shadow: 4px 4px silver;
+  vertical-align:middle;
+  animation: fg_fadeIn 3s;
+}
+.fg_Image {vertical-align:middle;
+	padding:3px;
+	animation: fg_fadeIn 3s;
+ }
+@keyframes fg_fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+.fg_Comment {padding:3px;}
+.fg_Label {text-align: right;padding: 3px;}
+.fg_Label:after {content:":";}
+.fg_Table {background:#eee}
+/* .fg_Table td {font: normal 10pt Arial} */
+.fg_Title {background-color:#acc;}
+.fg_Title, .fg_TabTitle {
+	font: bold 11pt Arial;
+	text-align: center;
+	padding:5px 0;
+}
+.fg_PopUp { 
+	background:#E0E0E0;
+	box-shadow:10px 10px #BFBFBF;
+    max-width: fit-content;
+	position: absolute;
+}
+.fg_PopUp .fg_Title {cursor:move}
