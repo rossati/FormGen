@@ -25,6 +25,7 @@
   0% { opacity: 0; }
   100% { opacity: 1; }
 }
+.fg_Button {cursor:pointer}
 .fg_Comment {padding:3px;}
 .fg_Label {text-align: right;padding: 3px;}
 .fg_Label:after {content:":";}
