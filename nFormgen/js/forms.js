@@ -1,5 +1,5 @@
 // jsForm generator sandbox forms **********
-// formgen 0.3.0 27 November 2024
+// formgen 0.3.0 27 December 2024
 // free to use but no warranties
 // El Condor - Condor Informatique - Turin
 // *****************************************
@@ -81,7 +81,7 @@ T Name '' 'hint=Input field'`
 + "\nT Number 'Signed Number' integer After positiveNumber"
 + "\nT psw Password password 'hint=Insert password'"
 + "\nC '' 'This is a green comment' class green"
-+ "\nC '' '*** This is a separator ***' center"
++ "\nC '' '*** This is a separator ***' align center"
 + "\nT Mail 'Mail address'"
 + "\nB changeUnit Change call changeMUnits After MeasureUnit 'title=Set time measures'"
 + "\nB Info images/info.png '' call infoPSW After psw"
@@ -94,6 +94,7 @@ T Name '' 'hint=Input field'`
 + "\nDefaults Slider=37.5 psw=Corkone6 MeasureUnit=m Town_List=Venice"
 + `
 Tab Attachements '' 'Attachements demo'
+B InfoAttach images/info.png alert 'Demo insert widget' after Attachements
 T WideField '' cols 50 rows 5
 B Info2 images/info.png '' alert 'Wide field' After  WideField
 T Protect 'Protect text' Value 'This is a Protected Field' disabled
@@ -134,12 +135,12 @@ var EventSubmit = "Form fe 'Submit on Enter or Select' server echo.php call rece
 + "\nCMB Category '' '=Anti,Antibiotic,Anti-inflammatory,"
 + "=Others,Beta-blocker,Cardiovascular,Dermatological,Endocrine,Gastroenterological,Gynecological,Neurological,Respiratory,Restorative'"
 + " Event change Submit"
-var Comments = "Form fc 'Comments and error' server echo.php call receive"
+var Comments = "Form fc 'Comments and error'"
 + "\nC '' \"The label field is the comment shown: "
-+ "<br>Comment|C [fieldName] 'some comment' [center|right|justify] [width nnn]"
++ "<br>Comment|C [fieldName] 'some comment' align [center|right|justify] [width nnn]"
 + "<br>Comment and C are synonym. "
-+ "The comment can be aligned by inserting center or right or justify. "
-+ "Comments have the class fg_Comment.\" Justify width 350"
++ "The comment can be aligned by inserting align center or right or justify. "
++ "Comments have the class fg_Comment.\" align Justify width 350"
 + "\nC '' <hr>"
 + "\nC '' 'images/faro.ico comment with images images/its.png'"
 + "\nC '' 'Below an error shown by formGen'"
@@ -166,7 +167,7 @@ T Mail Mail address '' width 25 hint 'Minimum 6 characters'
 T Protect 'Protected text' value 'Not modifiable Field' disabled
 CKB CheckBox 'Send info' 'Check for consent'
 T Time '' disabled
-C Comment Comment center
+C Comment Comment align center
 B Save images/update.png 'inline=In line button' alert 'Not saved, only for demo'
 GET Time getSample.php?Type=Time
 CMB Hellas 'Greek letters' Alfa,Beta,Delta,Epsilon,Gamma
@@ -174,7 +175,8 @@ CSS .fg_Table td, .fg_Table th {border: 1px solid #444}
 CSS .fg_Table tr:nth-child(2n+1) {background-color:#eee;}
 CSS .fg_Table tr:nth-child(2n+2) {background-color:#fff;}
 `
-var Images = `Form frm 'Images' server echo.php call receive
+var Images = `CSS .fg_Label:after {content:"";}
+Form frm 'Images' server echo.php call receive
 I Image_1 'El Condor' images/condor.gif title 'El condor pasa'
 I Image_2 'images/SagraSanMichele.png:Sacra di San Michele' class fg_Frame`
 var dictionary = {"Mail address":{IT: "Indirizzo di posta",FR:"Adresse e-mail",EL:"Tαχυδρομική διεύθυνση"},
