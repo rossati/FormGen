@@ -7,7 +7,7 @@
 	<link rel="stylesheet" href="css/styles.css">
 	<link rel="stylesheet" href="css/formgen.css">
 	<script src='js/formgen.js'></script>
-	<script src='../js/popUpGen.js'></script>
+<!--	<script src='../js/popUpGen.js'></script>-->
 	<script src='js/sandbox.js'></script>
 	<script src='js/forms.js'></script>
 <script type='text/javascript'>
@@ -40,8 +40,7 @@ function manageLocal(frm) {
 function infoPSW(button) {
 	alert("Password from 6 to 12 characters;\nat least one number and one capital letter")
 }
-function changeMUnits(field) {
-	const frm = $(field).form
+function changeMUnits(field,parm,frm) {
 	const newCombo = "=Time,s=Second,m=Minutes,H=Hour,Day,Month,Year"
 	frm.fg_createOptions(frm.MeasureUnit.id,newCombo)
 }
@@ -80,7 +79,7 @@ function tryjs(type,list) {
 			+ "\nGet WidgetType getSample.php?Type=Type"
 			+ "\nGet Hellas getSample.php?Type=Hellas"
 		Fgen2 = new fGen("result2",secondForm);
-		Fgen = new fGen("result",agree);
+		Fgen = new fGen("result",agree);		
 	} else if (type == "FormGen") {
 		Fgen = new fGen("result",formGenerator);
 	} else if (type == "NoButtons") {
