@@ -10,12 +10,12 @@ var infoTypes = {
 		+ "• value|default value\n"
 		+ "• Width nn the dimension of the button or image in pixels","",""],
 	C: ["Comment","The label field is the comment shown\nThe comment can be After|Below another field\n"
-	   +"Use center or right to modify alignement.","center","centered comment"],
+	   +"Use center or right to modify alignement.","align center","centered comment"],
 	CKB: ["Check","The extra field can contain a possible description shown to the right of the check box.\n"
 		+"Check box can appears after another control.","'check for consent'",""],
 	CKL: ["Checklist","This type generates a set of check boxes.\nThe extra field contains a list of field names separated by , (comma); "
 		+ "the field name is key if present, otherwise is value; value is the description that appears after the check box."
-		+ "\nThe view name become a hidden text field that contains the number of check boxes selected.","'C=C, C++, C#,JS=JavaScript,PHP,PYTHON,RUBY,RUST'","JS"],
+		+ "\nThe view name become a hidden text field that contains the number of check boxes selected.","'C=C\\x2c C++\\x2c C#,JS=JavaScript,PHP,PYTHON,RUBY,RUST'","JS"],
 	CMB: ["Combo","Drop Down list: permits to choice a value from a list.\n"
 		+"The extras fields contain the items in the form: key=value.\n"
 		+"If there is only one combo (type CMB) in the form, the form has no buttons and it is exited when a list item is selected\n"
@@ -141,9 +141,22 @@ function insertRow(id) {
 	insertRow.count++
 	var list = `
 B delete%n  \\x2718 call fGen.deleteWidget inline
-T attach%n ' ' after delete%n disabled width 40 value '${$(id).files[0].name}'
+T attach%n File_%n after delete%n disabled width 40 value '${$(id).files[0].name}'
 `
 	var idAfter = id
 	fGen.createWidget(idAfter,list.replace(/%n/g,insertRow.count))
 }
 insertRow.count = 0;
+insertFile.count = 0;
+function insertFile(idx,id) {
+	insertFile.count++
+	var list = `
+//B delete%n \\x2718 call 'fGen.deleteWidget frmAddFile' inline
+B delete%n \\x2718 call fGen.deleteWidget inline
+T attach_%n '' after delete%n width 40 File
+H hidden_%n cucu%n
+T Comment_%n '' width 35
+`
+	var idAfter = id
+	fGen.createWidget(idAfter,list.replace(/%n/g,insertFile.count))
+}

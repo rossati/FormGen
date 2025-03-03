@@ -1,5 +1,5 @@
 // jsForm generator sandbox forms **********
-// formgen 0.3.0 27 December 2024
+// formgen 0.3.0 20 February 2025
 // free to use but no warranties
 // El Condor - Condor Informatique - Turin
 // *****************************************
@@ -16,6 +16,10 @@ var controls = "Form frm Controls server echo.php call receive"
 + "\nCMB Measure 'Measures units' =Linear,mm=millimeter,cm=centimeter,m=meter,km=kilometer,=Weight,g=gram,kg=kilogram,t=ton"
 + "\nT Qty Quantity positive"
 + "\nT wQty 'Quantity withdrawn' positive"
++`
+S MinPressure Minimum From 20 To 160 width 180
+S MaxPressure Maximum From 40 To 280 width 200
+Control MinPressure < MaxPressure 'Minimum must be less of Maximum'`
 + "\nDefaults Qty=121"
 + "\nCheck wQty call controlWhithdraw 'excess quantity'"
 + "\nCheck Lang > 0 'Almost one language'"
@@ -64,8 +68,7 @@ var staticForm = "Form fHBook 'Static Form' server echo.php call receive static"
 + "\nEvent click on Clock server getSample.php?Type=Time set Text"
 + "\nEvent click on ShowCite server getITCite.php set result2"
 var form = `Form frm 'Complete Control Form' server echo.php ground #eee
-B fg_Cancel &#x2718 width 40 '' 'title=Cancel Form'
-B fg_Cancel \\x2718 width 40 title Cancel
+B fg_Cancel \\x2718 width 40 title 'Cancel Form'
 B fg_Reset \\x27f2 width 40 title Reset
 B Start \\x270E width 40
 T Name '' 'hint=Input field'`
@@ -83,7 +86,7 @@ T Name '' 'hint=Input field'`
 + "\nC '' 'This is a green comment' class green"
 + "\nC '' '*** This is a separator ***' align center"
 + "\nT Mail 'Mail address'"
-+ "\nB changeUnit Change call changeMUnits After MeasureUnit 'title=Set time measures'"
++ "\nB changeUnit Change call changeMUnits After MeasureUnit Width 60 'title=Set time measures'"
 + "\nB Info images/info.png '' call infoPSW After psw"
 + "\nB ShowData images/see.png inline 'Show data' call showData"
 + "\nControl Number >= -200 'Not allowed lesser -200'"
@@ -142,7 +145,7 @@ var Comments = "Form fc 'Comments and error'"
 + "The comment can be aligned by inserting align center or right or justify. "
 + "Comments have the class fg_Comment.\" align Justify width 350"
 + "\nC '' <hr>"
-+ "\nC '' 'images/faro.ico comment with images images/its.png'"
++ "\nC '' 'images/faro.ico anchor comment with images images/its.png' anchor images/Bukavu.png"
 + "\nC '' 'Below an error shown by formGen'"
 + "\nLink combo text"
 var formGenerator = "Form '' 'Form Generator' reset Call receiveDataForm onStart onStartFormGen"

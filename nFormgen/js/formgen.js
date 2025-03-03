@@ -1,11 +1,11 @@
 // jsForm generator ************************
-// formgen 0.4.1 2 January 2025
+// formgen 0.4.1 21 February 2025
 // free to use but no warranties
 // El Condor - Condor Informatique - Turin
 // *****************************************
 if (typeof(window.$) != "function") var $ = id => document.getElementById(id);  // wrap getElementById
 class fGen {
-	static version = "0.4.1 2 January 2025"
+	static version = "0.4.1 21 February 2025"
 	static formCount = 0;	// for form without name or popup form
 	static createNode(tag,id,style) {
 		var node = document.createElement(tag);
@@ -15,23 +15,35 @@ class fGen {
 	}
 	static createWidget = function(id,list) {
 		var obj =  new fGen("fg_Dummy",list)
-		$(id).form.appendChild(fGen.fragment.hiddensFieldSet)
-		var table = fGen.fragment.querySelector(".fg_Table")
 		if ($(id) != null) {
-			var tableR = $(id).closest("table")
-			if (tableR != null) $(id).closest("tr").after(table.rows[0])
+			$(id).form.appendChild(fGen.fragment.hiddensFieldSet)
+			var table = fGen.fragment.querySelector(".fg_Table")
+			if ($(id).closest("tr") != null) while (table.rows.length > 0) {
+				var tr = table.rows[table.rows.length-1]
+				tr.setAttribute("data-form",fGen.fragment.id)
+				$(id).closest("tr").after(table.rows[table.rows.length-1])
+			}
 		}
 		obj = null
 	}
-	static deleteWidget = id => $(id).closest("tr").remove()
+	static deleteWidget = (id,parm) => {
+		if (parm != "" && undefined) id = parm
+		var frm = $(id).closest("tr").dataset.form
+		if (frm == undefined) $(id).closest("tr").remove()
+		else {
+			var items = document.querySelectorAll(`[data-form="${frm}"]`)
+			items.forEach(item => {item.remove()});
+		}
+	}
+	static getAddedWidgets = id => document.querySelector("#"+id).querySelectorAll('[data-form]')
 	static fragment = ""
-	static extractTokens = function(s, delimiter) { // if delimiter true returns delimiters
-		if (delimiter == undefined) var delimiter = false
+	static extractTokens = function(s, quotes) { // quotes true returns quotes
+		if (quotes == undefined) var quotes = false
 		const reSplitTokens = /("[^"]*")|('[^']*')|(\S+)/g	// thank to Taky
 		var matchs = [...(s).matchAll(reSplitTokens)]		// ... copies array
 		var a = []
 		matchs.forEach(match => {
-			if (!delimiter && match[3] == undefined) {	// if match[3] there aren't delimiters
+			if (!quotes && match[3] == undefined) {	// if match[3] there aren't quotes
 				match[0] = match[0].substr(1,match[0].length -2)
 			}
 			a[a.length] = match[0]
@@ -68,7 +80,7 @@ class fGen {
 		link.style.left = (left > -1 ? left : 0.5 * (window.innerWidth - link.offsetWidth))+"px";
 	}
 //*******************************************************************
-// Source of Mike Hall modified by El Condor Mars 2021 October 2024
+// Source of Mike Hall modified by El Condor March 2021 October 2024
 //*******************************************************************
 	static dragObj = {};
 	static dragStart = function (id) {
@@ -114,7 +126,7 @@ class fGen {
 	}
 	static timeStamp = d => d.toISOString().slice(0,19).replace("T"," ")
 	static translate = (w) => {
-		if (/^".*"$|^'.*'$/.test(w)) w = w.substr(1,w.length-2)	// drops delimiters
+		if (/^".*"$|^'.*'$/.test(w)) w = w.substr(1,w.length-2)	// drops quotes
 		w = w.replace(/\\x[0-9A-F]{1,5}/gi,s => String.fromCharCode(parseInt("0"+s.substring(1))));
 	return (fGen.fg_dictionary[w] == undefined) ? w : fGen.fg_dictionary[w]
 }
@@ -184,16 +196,14 @@ splitKeyValue(itms) {	// return array of items
 }
 formGen (idDiv,param) {
 /* ************************* some functions *********************** */
-	var check = function(frm,widget) {	// can control all form or only the widget
-		if (widget == undefined) var widget = "";
+	var check = function(frm) {	// can control all form
 		var aErrors = [];
 		for (var field in controls) {
 			if (frm[field] == undefined)
 				console.log("Control",field,"not exists")
 			else {
 				var aItems = controls[field];
-				if (widget != "" && widget.name != field) continue;
-				var wdgValue = (widget == "") ? frm[field].value : widget.value;
+				var wdgValue = frm[field].value;
 				if (frm[field].style != undefined) frm[field].style.borderColor = "gray";
 				aItems.forEach(el => {
 					var err = false;
@@ -229,19 +239,15 @@ formGen (idDiv,param) {
 		return aErrors;
 	};
 	var storeDefaults = function(items) {	// used for store defaults
-		if (!Array.isArray(items)) items = fGen.extractTokens(items);
-		items.forEach(el  => {
-			const [name,value] = el.replace(/\s*[=]/,"0x00").split("0x00");
-			if (value != undefined) {
-				if (widgets[name] == undefined) console.log(name + " isn't a field")
-				else widgets[name].default = value;
+		if (typeof items == "string") items = JSON.parse(items);
+		Object.keys(items).forEach(el  => {
+			if (items[el] != undefined) {
+				if (widgets[el] != undefined) widgets[el].default = items[el];
 			};
 		});
 	}
 	var fg_setEvent = function (name,parms) {
-		if (fg_setEvent.count == undefined) fg_setEvent.count = 0;
 		if (events[name] == undefined) events[name] = []
-		parms.count = ++fg_setEvent.count
 		parms.event = parms.event.toLowerCase()
 		events[name][events[name].length] = parms
 	}
@@ -285,28 +291,30 @@ formGen (idDiv,param) {
 			fg_handle(frm,event.target.name);
 		}
 	}
-	var fg_handleEvents = function (frm,events,count) {
+	var fg_handleEvents = function (events) {
 		evnt = event.type
 		events.forEach((el) => {
-			var {server:fnz = "",call:jsFnz = "",field:fieldName = "",parm,parm2,count:eventCount} = el
-			if (fnz != "") {	// server function (URI)
-				if ($(fieldName) == null) {
-					if ($(jsForm.prefix+fieldName) == null) console.log(fieldName + ": field ID not present")
-				}
-				if (fnz == "submit") {
-					if (el.event == "enter") fg_handleEnter($(jsForm.ID),jsForm.prefix+fieldName);
-					else fg_handle(frm,fieldName);
-				} else {
-					fGen.prototype.ajax(fnz,frm,jsFnz,parm,parm2);
-				}
-			} else {	// only javascript function
-				if (evnt != "keydown" || el.event != "enter" || event.key == "Enter") {
-					if (typeof jsFnz == "function") {	// the case of internal function like fg_handle
+			if (evnt != "keydown" || (el.event == "enter" && event.key == "Enter")) {
+				var {server:fnz = "",call:jsFnz = "",field:fieldName = "",parm,parm2} = el
+				var frm = fieldName != "" ? $(jsForm.prefix+fieldName).form : $(jsForm.ID)	// ? : button like Reset
+				if (fnz != "") {	// server function (URI)
+					if ($(fieldName) == null) {
+						if ($(jsForm.prefix+fieldName) == null) console.log(fieldName + ": field ID not present")
+					}
+					if (fnz == "submit") {
+						if (el.event == "enter") fg_handleEnter(frm,jsForm.prefix+fieldName);
+						else fg_handle(frm,fieldName);
+					} else {
+						frm.fg_formFields(frm);		// add the calculated fields
+						fGen.prototype.ajax(fnz,frm,jsFnz,parm,parm2);
+					}
+				} else {	// only javascript function
+					if (typeof jsFnz == "function") {	// fGen function called internally
 						jsFnz(frm,fieldName,parm,parm2);
 					} else if (window[jsFnz] != undefined) {
 						if (jsFnz == "alert") {alert(fGen.translate(parm))}
 						else window[jsFnz](jsForm.prefix+fieldName,parm,frm);
-					} else if (typeof fGen[jsFnz.replace(/^fGen\./,"")] == "function") {fGen[jsFnz.replace(/^fGen\./,"")](jsForm.prefix+fieldName,parm,frm)
+					} else if (typeof fGen[jsFnz.substring(5)] == "function") {fGen[jsFnz.substring(5)](jsForm.prefix+fieldName,parm,frm)
 					} else console.log(jsFnz, "isn't a function")
 				}
 			}
@@ -328,7 +336,7 @@ formGen (idDiv,param) {
 			}
 		}
 	}
-	var fg_handleTab = function (oldTag) {
+	var fg_handleTab = function () {
 		if (event.target.type == "button") {
 			var tabs = document.getElementsByClassName("fg_Tab");
 			for (let i = 0; i < tabs.length; i++) {
@@ -369,7 +377,7 @@ formGen (idDiv,param) {
 				obj.call = a[1]
 				obj.parm = a[2]
 			}
-			if (window[obj.call] == undefined && fGen[obj.call.replace(/^fGen\./,"")] == undefined) {
+			if (window[obj.call] == undefined && fGen[obj.call.substring(5)] == undefined) {
 				wdg[wdg.length] = `C '' "${obj.call} isn't a function" class fg_Error`
 				obj.call = ""
 			}
@@ -389,12 +397,12 @@ formGen (idDiv,param) {
 	}
 	var has = (h, parm) => contains(h,parm) > -1 ? true:false
 	var normalizeLabel = l => {
-		l = l.replace(/(_[a-zA-Z])/, x => " " +x.substr(1,1).toLowerCase())			// aaa_bbb
+		l = l.replace(/(_[a-zA-Z0-9])/, x => " " +x.substr(1,1).toLowerCase())			// aaa_bbb
 		l = l.replace(/([a-z])([A-Z])/, (mtch,p1,p2) => p1+" " +p2.toLowerCase())	// aaaBbb
 		return l.substr(0,1).toUpperCase() + l.substr(1)
 	}
-	var saveDefault = function(c,frmID,name) {	// for combo, list and defaults
-		if (name.endsWith('*')) {storeDefaults(c,defaults)}	// this is the default list
+	var saveDefault = function(c,frmID,name,parm) {	// for combo, list and defaults
+		if (name.endsWith('*')) {storeDefaults(c)}	// this is the default list
 		else {
 			if (widgets[name] == undefined) console.log(name + " isn't a field")
 			else {
@@ -402,11 +410,12 @@ formGen (idDiv,param) {
 				else fGen.fg_Set(c,$(frmID),name)
 			}
 		}
+		if (parm != "") window[parm](c,$(frmID))
 	}
 	var setValue = function(fld,value) {
 		var type = widgets[fld][0];
 		var id = jsForm.prefix+fld;	// the name of control
-		if (type == "T" || type == "H" || type == "L" || type == "S") {
+		if (/^(T|H|L|S)$/.test(type)) {
 			$(id).value = value;	// text and hiddens
 			if (type == "S") $("s_"+id).value = value
 		} else if (type == "CMB") {
@@ -427,7 +436,6 @@ formGen (idDiv,param) {
 		} else if (type == "R") {
 			if ($(id+value) != null) $(id+value).checked = true;
 			else console.log("Default value",value,"for",fld,"not in list")
-		} else if (type == "CKL") {
 		} else if (type == "CKB") {
 			$(id).checked = has(widgets[fld].slice(3),"on")
 			$(id).value = value
@@ -473,7 +481,7 @@ formGen (idDiv,param) {
 			}
 			if (type == "CKL") {
 				f[name] = 0
-				this.splitKeyValue(widgets[name][3]).forEach(item => {if (frm[item[0]].checked) f[name] += 1});
+				this.splitKeyValue(widgets[name][3]).forEach(item => {if (frm[item[0]].checked) f[name]++});
 				frm[name].value = f[name]
 			}
 		}
@@ -490,27 +498,6 @@ formGen (idDiv,param) {
 		return f
 	}
 /* ************************* end some functions *************************/
-	if (idDiv.trim() == "") idDiv = "fg_PopUp"+fGen.formCount;
-	if(!$(idDiv)) {	// if div is not present is create as PopUp
-		var link = document.body.appendChild(fGen.createNode('DIV',idDiv,"visibility:hidden"));
-		if (idDiv != "fg_Dummy") link.className = 'fg_PopUp';
-	}
-	var hiddensFieldSet = fGen.createNode("fieldset","fg_hiddens","visibility:hidden")
-	if (param == "" || param == undefined) var param = "C '' Nodata!";
-	var aLists = {};			// Lists and combos array
-	var aGets = new(Array);		// GETs array
-	var widgets = {};			// widgets array and properties
-	var events = {};			// key name event = [function, param,...]
-	var wdgEvent = {B:"click",T:"Enter",R:"change",CKB:"change",CMB:"change",DATE:"change"}
-	var hiddens = idDiv != "fg_Dummy" ? {fg_Button:"",fg_Changed:"",fg_TimeStamp:""} : {}// Hidden data
-	var llText = 50;			// limit from text and textarea
-	var controls = {}			// controls
-	var defaults = [];			// defaults
-	var intervals = new Array();	// setInterval handlers
-	const numericTypes = "integer|float|positive"
-	var typeOfButton = 0;		// 1 if alternative Ok button(s), 2 standard buttons
-	var bottomButtons = []
-	var tabCount = 0
 	var styles = `.fg_Buttons {text-align:center;padding:3px 0}
 .fg_Error {color:red}
 .fg_Number {text-align:right;margin-right:12px}
@@ -518,7 +505,7 @@ formGen (idDiv,param) {
 .fg_See {margin-left:6px;font-size:20px}
 .fg_ButtonTab {border-top-right-radius:15px;height:30px;min-width:80px;border:1px solid #000;padding:5px;border-bottom:none;background:rgba(0,0,0,0)}
 .fg_Button,.fg_ButtonTab,.fg_Erase,.fg_See,.fg_CButton,.fg_GButton {cursor:pointer}
-.fg_CButton {border:none;background:rgba(0,0,0,0);font-size:18px}
+.fg_CButton {border:none;background:rgba(0,0,0,0);font-size:16px}
 .fg_Button:disabled, .fg_GButton:disabled, .fg_CButton:disabled{cursor: not-allowed;}
 .fg_GButton {border:none;background:none}
 .fg_Slider {width:3em;padding-left: 4px;border:none;background:rgba(0,0,0,0)}
@@ -526,13 +513,35 @@ formGen (idDiv,param) {
 .fg_alignImg {padding: 0 3px;vertical-align:middle;}
 .fg_Table td {padding:3px 2px}
 .fg_alignAfter {display: grid;grid-template-columns: max-content repeat(3,1rem);align-items: center;}`
+	if (idDiv.trim() == "") idDiv = "fg_PopUp"+fGen.formCount;
+	if(!$(idDiv)) {	// if div is not present is create as PopUp
+		var link = document.body.appendChild(fGen.createNode('DIV',idDiv,"visibility:hidden"));
+		link.className = 'fg_PopUp';
+		styles += ".fg_PopUp {position:absolute}\n.fg_PopUp .fg_Title {cursor:move}"
+	}
+	var hiddensFieldSet = fGen.createNode("fieldset",idDiv+"fg_hiddens","visibility:hidden")
+	if (param == "" || param == undefined) var param = "C '' Nodata!";
+	var aLists = {};			// Lists and combos array
+	var aGets = new(Array);		// GETs array
+	var widgets = {};			// widgets array and properties
+	var events = {};			// key name event = [function, param,...]
+	var wdgEvent = {B:"click",T:"Enter",R:"change",CKB:"change",CMB:"change",DATE:"change"}
+	var hiddens = (idDiv != "fg_Dummy") ? {fg_Button:"",fg_Changed:"",fg_TimeStamp:""} : {}// Hidden data
+	var llText = 50;			// limit from text and textarea
+	var controls = {}			// controls
+	var defaults = {};			// defaults
+	var intervals = new Array();	// setInterval handlers
+	const numericTypes = "integer|float|positive"
+	var typeOfButton = 0;		// 1 if alternative Ok button(s), 2 standard buttons
+	var bottomButtons = []
+	var tabCount = 0
 	var okTypes = {T:2,CKB:3,CMB:2,L:1.5,S:3,R:2,DATE:2,CKL:3}	// to establish the buttons to display
 	var lengths = {S:150,T:20,C:0,L:0,CMB:0,R:0}	// if no length is provided is 20 characters for texts
 	var numberLength = {integer:10,float:11,positive:9,text:20}
 	var acceptedTypes = {B:"B",C:"C",COMMENT: "C",CKB:"CKB",CKL:"CKL",CMB:"CMB",CONTROL: "CHECK",DEFAULTS:"DEFAULT",DICTIONARY:"DICT",
 						I:"I", IMAGE:"I",IMG:"I",L:"L",LIST:"L",R:"R",RDB:"R",REQUIRED:"REQ",S:"S",SLIDER:"S",TAB:"TAB",H:"H",HIDDEN:"H",DATE:"DATE",T:"T",TEXT: "T"}
-	var jsForm = {containerID:idDiv,static:0,server:"",call:"",eventOnStart:"",ID:"fg_frm"+fGen.formCount,
-		left:-1,prefix:"",title:"",target:"_blank",top:-1} // Form data
+	var jsForm = {containerID:idDiv,static:0,server:"",call:"",eventOnStart:"",ID:"fg_form"+fGen.formCount,
+		left:-1,prefix:"",title:"",target:"_blank",top:-1,nobuttons:false} // Form data
 // ******************************* start build *************************
 	var wdg = param.split(/\r\n|\r|\n/)		// all line separators Windows, MacOS, Unix
 	var i,j,k;
@@ -562,18 +571,21 @@ formGen (idDiv,param) {
 			jsForm.left = getParms(extra,"left",-1)
 			jsForm.target = getParms(extra,"target","_blank")
 			jsForm.title = field[2]
+			if (has(extra,"nobutton[s]?")) jsForm.nobuttons = true
 			if (has(extra,"static")) jsForm.static = 1
 			if (has(extra,"reset")) jsForm.static = 2
 			jsForm.eventOnStart = getParms(extra,"onStart")
 			if (jsForm.eventOnStart != "" && window[jsForm.eventOnStart] == undefined) wdg[wdg.length] = `C '' jsForm.eventOnStart isn't a function" class fg_Error`
 			widgets[field[1]] = []
-			widgets[field[1]].ID = jsForm.prefix+"fg_Title"	// It's actually the title ID
+			widgets[field[1]].ID = jsForm.prefix+"_Title"	// It's actually the title ID
 			widgets[field[1]].push(...field);
 		} else if (type == "CHECK") {
 			this.addControl(controls,field[1],field.slice(2))
 		} else if (type == "CSS") {styles += "\n"+wdg[i].replace(/Css\s+/i,"")
 		} else if (type == "DEFAULT") {
-			defaults.push(field.slice(1))
+			field.slice(1).forEach(el  => {
+				const [name,value] = el.replace(/\s*[=]/,"0x00").split("0x00");
+				defaults[name] = value})
 		} else if (type == "DICT") {
 			const fnz = getParms(field,"from")
 			if (fnz != "" && typeof window[fnz] == "function") {
@@ -595,7 +607,7 @@ formGen (idDiv,param) {
 		} else if (type == "REQ") {
 			for (var j=1;j<field.length; j++) if (field[j] != "") this.addControl(controls,field[j],Array("is","required","required"));
 		} else if (type == "GET") {
-			aGets.push([field[1],field[2],getParms(field,"every","0")])
+			aGets.push([field[1],field[2],getParms(field,"every","0"),getParms(field,"call")])
 		} else {		// widgets
 			if (acceptedTypes[type] == undefined) {
 				field = ["C","fg_" + i, "Unknown type: "+type,"class","fg_Error"]
@@ -633,11 +645,11 @@ formGen (idDiv,param) {
 		}
 	}
 	if ((lone > 2 || lone == 0) && idDiv != "fg_Dummy") {
-		if (lone > 2) {
+		if (lone > 2 && !jsForm.nobuttons) {
 			if (widgets.fg_Ok == undefined && (typeOfButton & 1) != 1) bottomButtons[bottomButtons.length] = createButton("B fg_Ok Ok",0)
 			if (widgets.fg_Reset == undefined) bottomButtons[bottomButtons.length] = createButton("B fg_Reset Reset",0)
 		}
-		if (widgets.fg_Cancel == undefined && jsForm.static != 1) bottomButtons[bottomButtons.length] = createButton("B fg_Cancel Cancel",0)
+		if (widgets.fg_Cancel == undefined && jsForm.static != 1 && !jsForm.nobuttons) bottomButtons[bottomButtons.length] = createButton("B fg_Cancel Cancel",0)
 		typeOfButton |= 2	// standard button(s) exists
 	}
 	var prefix = jsForm.prefix
@@ -645,14 +657,14 @@ formGen (idDiv,param) {
 	var styleTag = document.head.appendChild(fGen.createNode("style",formID+"fg_CSS"))
 	styleTag.type = "text/css"
 	styleTag.innerText = styles
-	var tableHead = (jsForm.title != "") ? `<thead><tr><th colspan=2 id="${prefix+"fg_Title"}" class='fg_Title'>${this.genImgTag(jsForm.title)}</td></tr></thead>` : ""
+	var tableHead = (jsForm.title != "") ? `<thead><tr><th colspan=2 id="${prefix+"_Title"}" class='fg_Title'>${this.genImgTag(jsForm.title)}</td></tr></thead>` : ""
 	var tableCommon = ""
 	var tableBody = ""
 	var tableFoot = ""
 	var frm =  ""
 	var aWidgets = Object.keys(widgets);
-	defaults.forEach(def => storeDefaults(def))
 	var loneField = ""
+	storeDefaults(defaults)
 	for (let i = 0;i<aWidgets.length;i++) {
 		var wdgTag = ""
 		var field = widgets[aWidgets[i]];
@@ -669,7 +681,7 @@ formGen (idDiv,param) {
 		}
 		var divLabel = this.genImgTag(label);
 		if (type == "TAB") {
-			widget.ID = IDName+"fg_Title"
+			widget.ID = IDName+"_TabTitle"
 			if (tabCount > 0) {
 				tableBody += `${frm}<tr><td colspan=2 style='text-align:center'>${fGen.hash2arrayValues(bottomTabButtons).join("")}</td></tr></tbody>`;
 			} else {
@@ -677,25 +689,26 @@ formGen (idDiv,param) {
 				tableBody = `<tbody><tr><td colspan=2 id='${formID+"fg_ButtonsTab"}'></tr></td></tbody>`
 			}
 			if (field[3] != "") divLabel = this.genImgTag(field[3])	// there is title
-			frm = `<tbody id='${IDName}' class='fg_Tab'>\n<tr><td class='fg_TabTitle' colspan='3' id='${widget.ID}'>${divLabel}</th></tr>`
+			frm = `<tbody id='${IDName}' class='fg_Tab'>\n<tr><td class='fg_TabTitle' colspan='3' id='${widget.ID}'>${divLabel}</td></tr>`
 			tabCount++
 			var bottomTabButtons = {}
-			bottomTabButtons["fg_Reset" + tabCount] = createButton("B fg_Reset" + tabCount + " Reset")
+			bottomTabButtons["fg_Reset" + tabCount] = createButton(`B fg_Reset${tabCount} Reset`)
 			continue
 		}
 		widget.tab = tabCount
 		widget.ID = IDName
 		if (type == "C") {	// Comment fields
-			var style = getParms(extra,"align","left")
-			if (style != "") style = "text-align:"+style+";"
-			if (fieldLength > 0) style += "display:inline-block;width:"+widget.width+"px"
+			var style = "text-align:" + getParms(extra,"align","left")
+			if (fieldLength > 0) style += ";display:inline-block;width:"+widget.width+"px"
 			var rows = getParms(extra,"rows|row",0)
 			if (rows > 0) style += ";height:"+rows*15+"px;overflow:auto"
 			wdgTag = ` id='${IDName}' class='fg_Comment' style='${style}'>`
+			if (has(extra,"anchor")) divLabel = `<A href='${getParms(extra,"anchor")}' target='_blank'>${divLabel}</A>`
 			if (widget.default == "") widget.default = divLabel
 			else widget.default = this.genImgTag(widget.default);
-			if (widget.place != "") wdgTag = "<span"+wdgTag+"</span>"
-			else wdgTag = "*<div"+wdgTag+"</div>"
+			var tagType = has(extra,"after|below") ? "span" : "div"
+			wdgTag = `<${tagType}${wdgTag}</${tagType}>`
+			if (widget.place == "") wdgTag = "*"+wdgTag
 		}
 		if (type == "I") {	// Image field
 			var isLabelGraficFile = fGen.hasGraphicFile(label)
@@ -722,8 +735,7 @@ formGen (idDiv,param) {
 			hiddens[name] = 0
 			widgets[name].type = "integer"
 			aItems.forEach(aItem => {
-				widgets[aItem[0]] = Array("CKB",aItem[0],aItem[1]);	// complete widgets
-				if (aItem[0] == widget.default) widgets[aItem[0]][3] = "on"
+				widgets[aItem[0]] = Array("CKB",aItem[0],aItem[1],(aItem[0] == widget.default) ? "on" : "");	// complete widgets
 				widgets[aItem[0]].default = "On"
 				wdgTag += `<input type=checkbox id='${prefix+aItem[0]}' name='${aItem[0]}'/>${this.genImgTag(aItem[1])}<br>`
 			})
@@ -750,6 +762,7 @@ formGen (idDiv,param) {
 				wdgTag = `\n<input type=range id='s_${IDName}' min='${min}' max='${max}' step='${step}'`
 				wdgTag += " onChange='this.nextSibling.value = this.value'";
 				wdgTag += ` style='width:${fieldLength}px;vertical-align:middle'/><input type=text size='10' readonly id='${IDName}' name='${name}' class='fg_Slider'>`;
+				widget.type = "float"
 		} else if (type == "T") {		// Text fields **************
 			loneField = name
 			widget.hint = fGen.translate(getParms(extra,"hint",""))
@@ -769,7 +782,7 @@ formGen (idDiv,param) {
 				var txtType = getParmsKey(extra,numericTypes,"text")
 				if (!has(extra,"width")) widget.width = numberLength[txtType]
 				widget.type = txtType
-				wdgTag = `<input type='${inputType}' id='${IDName}' name='${name}' size='${widget.width}' ${fileAttrib} value=''`
+				wdgTag = `<input type='${inputType}' id='${IDName}' name='${name}' size='${widget.width}'${fileAttrib} value=''`
 				if (txtType != "text") {
 					wdgTag += " class='fg_Number'";
 					fg_setEvent(name,{event:"keyup",call:fg_handleInput,field:name})
@@ -798,12 +811,13 @@ formGen (idDiv,param) {
 		if (widget.place != "" && widgets[widget.placeField] == undefined) {
 				widget.place = ""
 				console.log("field",widget.placeField,"doesn't exists")
+				wdgTag = "*" + wdgTag
 		}
 		if (wdgTag.startsWith("*")) frm += "\n<tr><td colspan='3'>" + wdgTag.substring(1)	// no label (inline buttons and comments)
 		else if (widget.place == "" && type != "B") { // no after|below
 			frm += "\n<tr><td class='fg_Label'>"+divLabel+"</td><td"+(wdgTag.substring(0,5) == "<text" ? " class='fg_alignAfter'":"")+">"+wdgTag;
 		} else {
-			widget.placeValue = (type != "B" && type != "CKB" && type != "C") ? `<span class='fg_Label'>${divLabel}</span>${wdgTag}` : wdgTag;
+			widget.placeValue = (!/^(B|CKB|C)$/.test(type)) ? `<span class='fg_Label'>${divLabel}</span>${wdgTag}` : wdgTag;
 		}
 	}
 	if (tabCount > 0) {
@@ -811,7 +825,7 @@ formGen (idDiv,param) {
 	} else tableCommon = "<tbody>"+frm+"</tbody>"
 	if (typeOfButton != 0 && bottomButtons.length > 0) tableFoot = `<tfoot id="${formID}fg_Buttons"><tr><td colspan=2 class='fg_Buttons'>${bottomButtons.join("")}</td></tr></tfoot>`
 	$(idDiv).innerHTML = `<div style='display:table' id="${formID}fg_Grid">
-	<FORM id='${formID}' method='POST' class='fg_Form'>
+<FORM id='${formID}' method='POST' class='fg_Form'>
 <table class='fg_Table' id='${formID+"_Table"}' style='visibility:hidden'>
 ${tableHead}
 ${tableCommon}
@@ -823,15 +837,16 @@ ${tableFoot}
 	var iTab = 0
 	Object.keys(widgets).forEach(f => {
 		var wdg = widgets[f]
-		var place = wdg.place
 		const [type,name,label,...extra] = wdg;
-		if (place == "after" || place == "below") {
+		
+		if (/below|after/.test(wdg.place)) {
+			if (wdg.place == "below") wdg.placeValue = "<br>" + wdg.placeValue
 			var afterField = wdg.placeField
 			if (widgets[afterField][0] == "FORM" || widgets[afterField][0] == "TAB") {
-				$(widgets[afterField].ID).innerHTML +=  wdg.placeValue
-			} else $(prefix+afterField).parentNode.innerHTML += ((place == "after") ? "" : "<br>") + wdg.placeValue
+				$(widgets[afterField].ID).innerHTML += "<div style='float:right'>"+wdg.placeValue+ "</div>"
+			} else $(prefix+afterField).parentNode.innerHTML += wdg.placeValue
 		}
-		if (has(extra,"class")) $(wdg.ID).classList.add(getParms(extra,'class'))
+		if (has(extra,"class")) $(wdg.ID).classList.add(getParms(extra,'class'))	
 		if (has(extra,"title")) $(wdg.ID).setAttribute("title",fGen.translate(getParms(extra,'title')))
 		if (has(extra,"color")) $(wdg.ID).style.color = getParms(extra,'color')
 		if (type == "T" && has(extra,"disabled")) {
@@ -862,6 +877,7 @@ ${tableFoot}
 		hidden.setAttribute("type","hidden");
 		hidden.setAttribute("name",f);
 		hidden.setAttribute("value",hiddens[f]);
+		if (idDiv == "fg_Dummy") hidden.setAttribute("data-form",jsForm.ID);
 	})
 	// add pointers	*****************************
 	$(formID).fg_check = check.bind(this)
@@ -871,25 +887,31 @@ ${tableFoot}
 	$(formID).fg_setValue = setValue.bind(this)
 	$(formID).fg_widgets = widgets
 	$(formID).hiddensFieldSet = hiddensFieldSet
-// add events ***********************************
-	Object.keys(events).forEach(f => {
-		var eField = prefix+f
-		if ($(eField) == null) console.log(eField + ": event field not present")
-		else {
-			events[f].forEach((el) => {
-				var evnt = el.event == "enter" ? "keydown" : el.event
-				if ($(eField).type == "radio") {
-					const wdgs = $(formID).elements;
-					for (let i = 0; i < wdgs.length; i++) {
-						if (f == wdgs[i].name) $(wdgs[i].id).addEventListener(evnt,fg_handleEvents.bind(event,$(formID),events[f],el.count));
+	// add events ***********************************
+		Object.keys(events).forEach(f => {
+			var eField = prefix+f
+			if ($(eField) == null) console.log(eField + ": event field not present")
+			else {
+				events[f].forEach((el) => {
+					var evnt = el.event == "enter" ? "keydown" : el.event
+					if ($(eField).type == "radio") {
+						const wdgs = $(formID).elements;
+						for (let i = 0; i < wdgs.length; i++) {
+							if (f == wdgs[i].name) $(wdgs[i].id).addEventListener(evnt,fg_handleEvents.bind(event,events[f]));
+						}
+					} else {
+						$(eField).addEventListener(evnt,fg_handleEvents.bind(event,events[f]));
 					}
-				} else {
-					$(eField).addEventListener(evnt,fg_handleEvents.bind(event,$(formID),events[f],el.count));
-				}
-			})
-		}
-	})
-	// add lone events widget without buttons
+				})
+			}
+		})
+	if (idDiv == "fg_Dummy") {
+		$(formID).appendChild(hiddensFieldSet)
+		fGen.prototype.setDefaults($(formID),0);
+		fGen.fragment = $(formID);
+		return
+	}
+	// add event to lone widget (no buttons)
 	if (lone < 3 && lone != 0 && jsForm.static != 1) {
 		switch (widgets[loneField][0]) {
 			case "CMB": case "DATE":
@@ -914,9 +936,9 @@ ${tableFoot}
 /********************  handle GET pseudo type ********************/
 	var ajaxCount = [0];
 	for (var i=0;i<aGets.length;i++) {
-		var [name, url,timeout] = aGets[i];	// GET,[* | name],URI[,timeout]
+		var [name, url,timeout,fnz] = aGets[i];	// GET,*|name,URI ,timeout|0, call|<empty>
 		ajaxCount[0]++;
-		this.ajax(url,formID,saveDefault,name,"",ajaxCount)
+		this.ajax(url,formID,saveDefault,name,fnz,ajaxCount)
 		var timeout = parseInt(timeout,10);
 		if (timeout > 99) intervals.push(setInterval(this.ajax.bind(),timeout,url,$(formID),fGen.fg_Set,name));	// recurrent requests
 	}
@@ -934,11 +956,10 @@ ${tableFoot}
 				if ($(idDiv).classList.contains("fg_PopUp") && $(jsForm.ID)) $(jsForm.ID).addEventListener("mousedown", fGen.dragStart.bind(null,idDiv))
 			}
 			$(formID+"_Table").style.visibility = "visible"
-			if (firstTabID != null) firstTabID.style.cssText = "visibility:visible;";
+			if (firstTabID != null) firstTabID.style.cssText = "visibility:visible";
 		}, 500)
 		$(formID).appendChild(hiddensFieldSet)
 		fGen.prototype.setDefaults($(formID),0);	// set defaults
-		if (idDiv == "fg_Dummy") {fGen.fragment = $(formID);return}
 		if (jsForm.eventOnStart != "") window[jsForm.eventOnStart]($(formID))
 	}
 	waitAjax(totalWait)
@@ -954,9 +975,9 @@ fGen.prototype.ajax = function(url,frm,handler,parm1,parm2,ajaxCount) {
 				if (count != undefined) count[0]--
 				var rsp = ajx.responseText
 				if (handler != "") {
-					if(typeof handler == "function") handler(rsp,frm,parm1,parm2)	// object function
-					else if (typeof window[handler] == "function") window[handler](rsp,frm,parm1,parm2)
-					else if (typeof fGen[handler.replace(/^fGen\./,"")] == "function") fGen[handler.replace(/^fGen\./,"")](rsp,frm,parm1,parm2)
+					if(typeof handler == "function") handler(rsp,frm,parm1,parm2)	// internal function
+					else if (typeof window[handler] == "function") window[handler](rsp,parm1,frm,parm2)
+					else if (typeof fGen[handler.substring(5)] == "function") fGen[handler.substring(5)](rsp,frm,parm1,parm2)
 					else console.log(handler,"isn't a function")
 				}
 			} else alert(`Error: ${ajx.status}, ${ajx.statusText}`);
