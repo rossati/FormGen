@@ -9,8 +9,8 @@ if ($type == "Type") {
 }
 if ($type == "Hellas") {echo "Alfa,Beta,Delta,Gamma,Epsilon";}
 else if ($type == "Towns") {echo "London,Paris,Rome,Toulon,Toulouse,Turin,Zurich";}
-else if ($type == "Defaults") {echo "Town=Turin Hellas=Alfa 'WidgetType=T file' Languages=Pascal 'HiddenField=El Condor'";}
-else if ($type == "PSDefaults") {echo "Town Turin Hellas Alfa Languages Pascal";}
+else if ($type == "Defaults") {echo '{"Town":"Turin","Hellas":"Alfa","WidgetType":"T file","Languages":"Pascal","HiddenField":"El Condor"}';}
+//else if ($type == "PSDefaults") {echo "Town Turin Hellas Alfa Languages Pascal";}
 else if ($type == "Lang") {echo "Algol,Cobol,Fortran,JavaScript,Pascal,PHP";}
 else if ($type == "Time") {date_default_timezone_set("Europe/Rome");echo date("h:i");}
 else if ($type == "Version") {
