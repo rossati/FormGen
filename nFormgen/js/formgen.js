@@ -1,17 +1,31 @@
 // jsForm generator ************************
-// formgen 0.4.1 21 February 2025
+// formgen 0.4.1 20 March 2025
 // free to use but no warranties
 // El Condor - Condor Informatique - Turin
 // *****************************************
 if (typeof(window.$) != "function") var $ = id => document.getElementById(id);  // wrap getElementById
-class fGen {
-	static version = "0.4.1 21 February 2025"
+window.fGen = class fGen {
+	static version = "0.4.1 20 March 2025"
 	static formCount = 0;	// for form without name or popup form
 	static createNode(tag,id,style) {
 		var node = document.createElement(tag);
 		if (id != undefined) node.setAttribute("id",id);
 		if (style != undefined) node.style.cssText = style;
 		return node
+	}
+	static getFormData = function(frm) {
+		if (frm.tagName == "FORM") return new FormData(frm)		// form
+		if (typeof frm.entries == "function") return frm		// formData
+		const frmData = new FormData();
+		if (typeof frm == "string") {							// key=value&key=value...
+			frm.split(/&/).forEach(item => {
+				var a = (item+"=").split(/=/)
+				frmData.append(a[0], a[1].replaceAll(/%26|%3d/g,match => String.fromCharCode(parseInt(match.substring(1),16))));		
+			})
+		} else if (typeof frm == "object") {					// hash table
+			Object.keys(frm).forEach(el  => frmData.append(el,frm[el]))
+		}
+		return frmData
 	}
 	static createWidget = function(id,list) {
 		var obj =  new fGen("fg_Dummy",list)
@@ -74,8 +88,13 @@ class fGen {
 			}
 		}
 	}
-	static setObjPosition = function(ID,top,left) {
-		var link = $(ID)
+	static isFunction = fnz => {
+		var a = fnz.split(/\./)
+		if (a.length == 1) return (typeof window[a[0]] == "function")
+		if (a.length == 2 && window[a[0]] != undefined) return (typeof window[a[0]][a[1]] == "function")
+		return false
+	}
+	static setObjPosition = function(link,top,left) {
 		link.style.top = (top  > -1 ? top : 0.5 * (window.innerHeight - link.offsetHeight))+"px";
 		link.style.left = (left > -1 ? left : 0.5 * (window.innerWidth - link.offsetWidth))+"px";
 	}
@@ -108,11 +127,7 @@ class fGen {
 			event.preventDefault();
 		}
 	}
-	static hash2arrayValues = function(h) {
-		var a = []
-		Object.keys(h).forEach(f => {a[a.length] = h[f]})
-		return a
-	}
+	static hash2arrayValues = h => Object.values(h)
 	static hasGraphicFile = f => /.+?\.(png|gif|jpe?g|ico|bmp)([:\t].+)?/i.test(f)
 	static isGraphicFile = f => /.+?\.(png|gif|jpe?g|ico|bmp)$/i.test(f)
 	static showImage = function(id,rsp) {
@@ -219,7 +234,7 @@ formGen (idDiv,param) {
 							}
 							break;
 						case "call":
-							if (typeof window[operand] == "function") err = (!window[operand](frm,field,wdgValue));
+							if (fGen.isFunction(operand)) err = (!eval(operand)(frm,field,wdgValue));
 							else console.log(operand, "isn't a function")
 							break;
 						case "==": case "!=": case ">": case ">=": case "<": case "<=":
@@ -267,7 +282,7 @@ formGen (idDiv,param) {
 				frm.target = jsForm.target;
 				frm.submit();
 		} else if (jsForm.server == "" && jsForm.call != "") {		// only call function
-			window[jsForm.call](frm);
+			eval(jsForm.call)(frm);
 		} else if (jsForm.server != "" && jsForm.call != "" && button != "fg_Cancel") {	// call Ajax receive in function
 			if (jsForm.encoding != undefined) frm.encoding = "multipart/form-data";	// for files
 			fGen.prototype.ajax(jsForm.server,frm,jsForm.call,jsForm.parm);
@@ -309,12 +324,10 @@ formGen (idDiv,param) {
 						fGen.prototype.ajax(fnz,frm,jsFnz,parm,parm2);
 					}
 				} else {	// only javascript function
-					if (typeof jsFnz == "function") {	// fGen function called internally
-						jsFnz(frm,fieldName,parm,parm2);
-					} else if (window[jsFnz] != undefined) {
+					if (typeof jsFnz == "function") jsFnz(frm,fieldName,parm,parm2);	// fGen function called internally						
+					else if (fGen.isFunction(jsFnz)) {
 						if (jsFnz == "alert") {alert(fGen.translate(parm))}
-						else window[jsFnz](jsForm.prefix+fieldName,parm,frm);
-					} else if (typeof fGen[jsFnz.substring(5)] == "function") {fGen[jsFnz.substring(5)](jsForm.prefix+fieldName,parm,frm)
+						else eval(jsFnz)(jsForm.prefix+fieldName,parm,frm);
 					} else console.log(jsFnz, "isn't a function")
 				}
 			}
@@ -355,7 +368,7 @@ formGen (idDiv,param) {
 		if (typeof f == "string") f = fGen.extractTokens(f)
 		var [type,name,caption,...extra] = f
 		caption = fGen.prototype.genImgTag(caption)
-		var cls = fGen.hasGraphicFile(f[2]) ? "fg_GButton" : (caption.length > 1 ? "fg_Button" : "fg_CButton")
+		var cls = fGen.hasGraphicFile(f[2]) ? "fg_GButton" : (caption.length == 1 || /^&#([0-9]{1,6}|x[0-9A-F]{1,6});$/i.test(caption)) ? "fg_CButton" : "fg_Button"
 		cls = getParms(extra,"class", cls)
 		var b = `\n<button type=button name='${name}' id='${jsForm.prefix + name}'`
 		b += has(extra,"width") ? " style='width:"+getParms(extra,"width")+"px'" : ""
@@ -377,7 +390,8 @@ formGen (idDiv,param) {
 				obj.call = a[1]
 				obj.parm = a[2]
 			}
-			if (window[obj.call] == undefined && fGen[obj.call.substring(5)] == undefined) {
+//			if (window[obj.call] == undefined && fGen[obj.call.substring(5)] == undefined) {
+			if (!fGen.isFunction(obj.call)) {
 				wdg[wdg.length] = `C '' "${obj.call} isn't a function" class fg_Error`
 				obj.call = ""
 			}
@@ -575,7 +589,7 @@ formGen (idDiv,param) {
 			if (has(extra,"static")) jsForm.static = 1
 			if (has(extra,"reset")) jsForm.static = 2
 			jsForm.eventOnStart = getParms(extra,"onStart")
-			if (jsForm.eventOnStart != "" && window[jsForm.eventOnStart] == undefined) wdg[wdg.length] = `C '' jsForm.eventOnStart isn't a function" class fg_Error`
+			if (jsForm.eventOnStart != "" && !fGen.isFunction(jsForm.eventOnStart)) wdg[wdg.length] = `C '' jsForm.eventOnStart isn't a function" class fg_Error`
 			widgets[field[1]] = []
 			widgets[field[1]].ID = jsForm.prefix+"_Title"	// It's actually the title ID
 			widgets[field[1]].push(...field);
@@ -838,7 +852,7 @@ ${tableFoot}
 	Object.keys(widgets).forEach(f => {
 		var wdg = widgets[f]
 		const [type,name,label,...extra] = wdg;
-		
+
 		if (/below|after/.test(wdg.place)) {
 			if (wdg.place == "below") wdg.placeValue = "<br>" + wdg.placeValue
 			var afterField = wdg.placeField
@@ -846,7 +860,7 @@ ${tableFoot}
 				$(widgets[afterField].ID).innerHTML += "<div style='float:right'>"+wdg.placeValue+ "</div>"
 			} else $(prefix+afterField).parentNode.innerHTML += wdg.placeValue
 		}
-		if (has(extra,"class")) $(wdg.ID).classList.add(getParms(extra,'class'))	
+		if (has(extra,"class")) $(wdg.ID).classList.add(getParms(extra,'class'))
 		if (has(extra,"title")) $(wdg.ID).setAttribute("title",fGen.translate(getParms(extra,'title')))
 		if (has(extra,"color")) $(wdg.ID).style.color = getParms(extra,'color')
 		if (type == "T" && has(extra,"disabled")) {
@@ -952,7 +966,7 @@ ${tableFoot}
 		if (ajaxCount[0] > 0) alert("Ajax timeout after "+totalWait + "ms");
 		setTimeout((firstTabID) => {
 			if ($(idDiv).classList.contains("fg_PopUp") || jsForm.top > -1 || jsForm.left > -1) {
-				fGen.setObjPosition(idDiv,jsForm.top,jsForm.left)
+				fGen.setObjPosition($(idDiv),jsForm.top,jsForm.left)
 				if ($(idDiv).classList.contains("fg_PopUp") && $(jsForm.ID)) $(jsForm.ID).addEventListener("mousedown", fGen.dragStart.bind(null,idDiv))
 			}
 			$(formID+"_Table").style.visibility = "visible"
@@ -967,7 +981,7 @@ ${tableFoot}
 }
 }
 fGen.prototype.ajax = function(url,frm,handler,parm1,parm2,ajaxCount) {
-	var data = (typeof(frm) == "string")? frm :new FormData(frm);
+	var data = fGen.getFormData(frm);
 	var ajx = new XMLHttpRequest();
 	var fnz = function (count) {
 		if (ajx.readyState == 4) {
@@ -976,8 +990,7 @@ fGen.prototype.ajax = function(url,frm,handler,parm1,parm2,ajaxCount) {
 				var rsp = ajx.responseText
 				if (handler != "") {
 					if(typeof handler == "function") handler(rsp,frm,parm1,parm2)	// internal function
-					else if (typeof window[handler] == "function") window[handler](rsp,parm1,frm,parm2)
-					else if (typeof fGen[handler.substring(5)] == "function") fGen[handler.substring(5)](rsp,frm,parm1,parm2)
+					else if (fGen.isFunction(handler)) eval(handler)(rsp,frm,parm1,parm2)
 					else console.log(handler,"isn't a function")
 				}
 			} else alert(`Error: ${ajx.status}, ${ajx.statusText}`);
@@ -985,7 +998,6 @@ fGen.prototype.ajax = function(url,frm,handler,parm1,parm2,ajaxCount) {
 	}
 	ajx.onreadystatechange = fnz.bind(event,ajaxCount)
 	ajx.open("POST", url, true)
-	if (typeof data != "object") {ajx.setRequestHeader("Content-type", "application/x-www-form-urlencoded")}
 	ajx.send(data);
 }
 fGen.prototype.showData = function(data) {
