@@ -15,11 +15,8 @@ function seeEvent() {
 	console.log(event.type,event.target.type)
 }
 function myHandler(button,URI,frm) {	// can be called with button or form
-//	if (typeof button == "string") {
-//		var frm = $(button).form
-		var aErrors = frm.fg_check(frm);
-		if (aErrors.length > 0) {alert("Errors:\n"+aErrors.join("\n"));return;}	
-//	} else frm = button
+	var aErrors = frm.fg_check(frm);
+	if (aErrors.length > 0) {alert("Errors:\n"+aErrors.join("\n"));return;}	
 	frm.fg_formFields(frm)	// set list of widgets changed
 	frm.encoding = "multipart/form-data";
 	frm.target = "_blank";
@@ -182,10 +179,12 @@ function getImage(id) {
 	};
 	capture();
 }
-function changeGroundColor(frm) {
-	const changeColor = "Form '' 'Change Color' call changeGroundColor\nCMB Color '' Lightblue,Olive,Silver,Teal,White"
-	if (frm == undefined) new fGen("result",changeColor)
-	else document.body.style.background = frm.Color.value
+function changeGroundColor() {
+	const changeColor = "Form '' 'Change Color' call changeGRColor\nCMB Color '' Lightblue,Olive,Silver,Teal,White"
+	if ($("Color") === null) new fGen("",changeColor)
+}
+function changeGRColor(frm) {
+	document.body.style.background = frm.Color.value
 }
 </script>
 </head>
