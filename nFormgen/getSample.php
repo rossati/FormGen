@@ -4,12 +4,12 @@ if ($type == "Type") {
 	echo "=Buttons,B=Button,R=Radio button,R vertical=Vertical Radio button,"
 	."=Lists,CMB=Combo box,L=List,"
 	."=Texts,C=Comment,T file=File,H=Hidden field,T Positive=Numeric,T integer=Numeric signed,"
-	."T float=Numeric with decimals,T password=Password,T=Text,T readonly=Read only text,"
+	."T float=Numeric with decimals,T password=Password,T readonly=Read only text,T=Text,"
 	."=Others,CKB=Check box,S=Slider";
 }
 if ($type == "Hellas") {echo "Alfa,Beta,Delta,Gamma,Epsilon";}
 else if ($type == "Towns") {echo "London,Paris,Rome,Toulon,Toulouse,Turin,Zurich";}
-else if ($type == "Defaults") {echo '{"Town":"Turin","Hellas":"Alfa","WidgetType":"T file","Languages":"Pascal","HiddenField":"El Condor"}';}
+else if ($type == "Defaults") {echo '{"Town":"Turin","Hellas":"Alfa","WidgetType":"T file","Languages":"Basic","HiddenField":"El Condor"}';}
 //else if ($type == "PSDefaults") {echo "Town Turin Hellas Alfa Languages Pascal";}
 else if ($type == "Lang") {echo "Algol,Cobol,Fortran,JavaScript,Pascal,PHP";}
 else if ($type == "Time") {date_default_timezone_set("Europe/Rome");echo date("h:i");}
