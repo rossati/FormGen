@@ -1,42 +1,27 @@
-html {
- height: 100%; /* The height of your html document takes 100% size of window */
-}
+html {height: 100%;}
 body {
     background-color: lightblue;
 	height:100%;
 	display: grid;
-	grid-template-columns:  50% 50%;
-	grid-template-rows: 12% auto;
+	grid-template-columns:  40% 60%;
+	grid-template-rows:  10% 90%;
 	grid-template-areas:
 	"header header"
-	"leftCol rightCol"
-	"footer footer";
-	grid-gap: 5px;
+	"leftCol rightCol";
+	grid-column-gap: 3px;
  }
- .header{
-   grid-area: header;
- }
- .leftCol{
-   grid-area: leftCol;
- }
- .rightCol{
-   grid-area: rightCol;
-   margin: 5px;
- }
-  .footer{
-   grid-area: footer;
- }
- .imgbtn {
+.header{grid-area: header;}
+.leftCol{grid-area: leftCol;}
+.rightCol{grid-area: rightCol;}
+.footer{grid-area: footer;}
+.imgbtn {
   border:0;
   cursor:pointer;
   vertical-align:middle;
-  padding: 2px 2px;
 }
 .red {color: red}
 .green {color: green}
 .blue {color: blue}
-input[type="checkBox"] {cursor:pointer;}
-#result{width:70%}
 label {
 color: #404040;
 font-weight: bold;
@@ -44,16 +29,4 @@ display: block;
 width: 150px;
 float: left;
 }
-label:after {content: ":"}
-h3 {text-align:center}
-#PopUp {
-    position: absolute;
-	text-align: right;
-    width: auto;
-	height: auto;
-	border: outset olive;
-	visibility: hidden;
-	overflow:auto;
-    opacity: 0.9;
-}
-#PopUp div {cursor:pointer;background-color:olive}
+h3 {text-align:center;margin:0;padding:0}
