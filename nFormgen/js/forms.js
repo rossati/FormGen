@@ -1,13 +1,12 @@
 // jsForm generator sandbox forms **********
-// formgen 0.3.0 20 February 2025
+// formgen 0.3.0 8 January 2026
 // free to use but no warranties
 // El Condor - Condor Informatique - Turin
 // *****************************************
 var agree = "form '' 'Enable example'"
-+ "\nCKB Agree 'Consent cookies?' 'I agree'"
++ "\nCKB Agree 'Consent cookies?' 'I agree' Switch Start"
 + "\nB Start '' disabled"
-+ "\nB fg_Cancel &#x2718;"
-+ "\nEvent click on Agree call enableStart"
++ "\nB fg_Cancel &#x2718"
 var controls = "Form frm Controls server echo.php call receive"
 + "\nT Mail ''  mail"
 + "\nRequired Mail Measure"
@@ -27,7 +26,7 @@ var checkNumber = "T Number '' Float 'Insert Floating number'"
 + "\nControl Number >= -200 'Not allowed lesser -200'"
 + "\nControl Number <= 200 'Not allowed greater 200'"
 + "\nCheck Number is ^[-+]?\\d{1,3}(\\.\\d{1,2})?$ 'incorrect format'"
-+ "\nC c1 'Floating point number\\nbetween -200.00 and 200.00 (two decimals)'"
++ "\nC c1 'Floating point number<br>between -200.00 and 200.00 (two decimals)'"
 var CustomSubmit = "Form form 'Example Form'"
 + "\nT Text '' width 30 hint 'Text placeholder'"
 + "\nS Slider '' From 34 To 43 step 0.1"
@@ -50,6 +49,7 @@ Form frm2 '' server echo.php call receive
 CMB Unit 'Measure Unit' =Linear,mm=millimeter,cm=centimeter,m=meter,km=kilometer,=Weight,g=gram,kg=kilogram,t=ton`
 var radioButtons = `CSS .fg_Table,.fg_Title,.fg_Buttons {background:#acc}
 CSS .fg_Table td, .fg_Table th {border: 1px solid #444}
+CSS .fg_Table {border-collapse:collapse}
 Form rdb 'Radio buttons example' server echo.php call receive
 R Status ''  M=Married,S=Single,W=Widow
 R Sex 'images/sex.png'  'M=&#9794; Male,F=&#9792; Female,N=Not specified'`
@@ -57,7 +57,7 @@ R Sex 'images/sex.png'  'M=&#9794; Male,F=&#9792; Female,N=Not specified'`
 + "\nR Nations '' 'It=images/its.png Italia,Fr=images/frs.png France,"
 + "Es=images/ess.png España,Us=images/uss.png United States,El=images/els.png Ελλάδα' vertical"
 + "\nDefaults Nations=El Sex=M"
-var staticForm = "Form fHBook 'Static Form' server echo.php call receive static"
+var staticForm = "Form fHBook 'No buttons Form' nobuttons"
 + "\nB Clock images/clock.png inline 'Get Time'"
 + "\nC Text ' ' width 100 after Clock"
 + "\nB xExcel images/excel.png alert 'Create Excel file' inline 'Excel file'"
@@ -66,11 +66,11 @@ var staticForm = "Form fHBook 'Static Form' server echo.php call receive static"
 + "\nB ShowCite images/new.png inline 'Show IT quote'"
 + "\nEvent click on ShowImage server getImage.php?NoTitle set Image"
 + "\nEvent click on Clock server getSample.php?Type=Time set Text"
-+ "\nEvent click on ShowCite server getITCite.php set result2"
++ "\nEvent click on ShowCite server getITCite.php set result3"
 var form = `Form frm 'Complete Control Form' server echo.php ground #eee
-B fg_Cancel \\x2718 width 40 title 'Cancel Form'
-B fg_Reset \\x27f2 width 40 title Reset
-B Start \\x270E width 40
+B fg_Cancel \\x2718 width 30 title 'Cancel Form'
+B fg_Reset \\x27f2 width 30 title Reset
+B Start \\x270E width 30
 T Name '' 'hint=Input field'`
 + "\nTab Complete"
 + "\nCMB MeasureUnit  '' '=Linear,mm=millimeter,cm=centimeter,m=meter,km=kilometer,=Weight,g=gram,kg=kilogram,t=ton'"
@@ -105,7 +105,7 @@ T Attachement '' File Event change call insertRow width 40
 `
 var gets = "Form frmg2 'Get example' server echo.php call receive"
 + "\nT Widget '' disabled"
-+ "\nCMB WidgetType '' '' link Widget group"
++ "\nCMB WidgetType '' '=Pseudo,Event,Form,Get' link Widget"
 + "\nCMB Hellas 'Greek letters' '' multiple"
 + "\nList Town"
 + "\nCMB Languages"
@@ -119,20 +119,20 @@ var getExample ="Form frmg2 'Get example' server echo.php call receive"
 + "\nT Time '' disabled"
 + "\nT Widget '' disabled"
 + "\nT piGreco '' value 3.14159 float disabled"
-+ "\nCMB WidgetType '' '' link Widget"
++ "\nCMB WidgetType '' '=Pseudo,Event,Form,Get' link Widget"
 + "\nCMB Hellas 'Greek letters' '' multiple"
 + "\nList Town"
 + "\nCMB Languages"
 + "\nHidden HiddenField"
-+ "\nB fg_Ok &#x270E; width 45"
-+ "\nB fg_Cancel &#x2718; width 45 'title=Cancel Form'"
-+ "\nB fg_Reset &#x21B6; width 45 'title=Reset Form'"
++ "\nB fg_Ok &#x270E; width 30"
++ "\nB fg_Cancel &#x2718; width 30 'title=Cancel Form'"
++ "\nB fg_Reset &#x21B6; width 30 'title=Reset Form'"
 + "\nGet * getSample.php?Type=Defaults"
 + "\nGet WidgetType getSample.php?Type=Type"
 + "\nGet Town getSample.php?Type=Towns"
 + "\nGet Hellas getSample.php?Type=Hellas"
 + "\nGET Time getSample.php?Type=Time"
-+"\nGET Languages getSample.php?Type=Lang"
++ "\nGET Languages getSample.php?Type=Lang call addSomeLanguage"
 var EventSubmit = "Form fe 'Submit on Enter or Select' server echo.php call receive"
 + "\nT Name '' Event Enter Submit"
 + "\nCMB Category '' '=Anti,Antibiotic,Anti-inflammatory,"
@@ -151,8 +151,8 @@ var Comments = "Form fc 'Comments and error'"
 var formGenerator = "Form '' 'Form Generator' reset Call receiveDataForm onStart onStartFormGen"
 + "\nCMB type Type '=Buttons,B=Button,GB=Graphic button,IB=Inline button,R=Radio buttons,RV=Vertical Radio buttons,"
 + "=Lists,CMB=Combo box,L=List,CKL=Chek box list,=Texts,C=Comment,H=Hidden field,T=Text field,"
-+"=Others,CKB=Check box,Date,I=Image,S=Slider'"
-+"\nCMB textType '' P=Password,NF=Float,NS=Integer,N=Positive,F=File,U=Protect After type"
++"=Others,CKB=Check box,Date,I=Image,S=Slider,CSS'"
++"\nCMB textType '' 'P=Password,NF=Float,NS=Integer,N=Positive,F=File,U=Protect,WT=Wide Text' After type"
 + "\nT help 'Use of control' width 300 disabled"
 + "\nT name Name hint 'The name of the control'"
 + "\nT label Label width 30 hint 'The label shown'"
@@ -174,8 +174,7 @@ C Comment Comment align center
 B Save images/update.png 'inline=In line button' alert 'Not saved, only for demo'
 GET Time getSample.php?Type=Time
 CMB Hellas 'Greek letters' Alfa,Beta,Delta,Epsilon,Gamma
-CSS .fg_Table td, .fg_Table th {border: 1px solid #444} 
-CSS .fg_Table tr:nth-child(2n+1) {background-color:#eee;}
+CSS .fg_Table td, .fg_Table th {outline: 1px solid #CCC;padding:1px}
 CSS .fg_Table tr:nth-child(2n+2) {background-color:#fff;}
 `
 var Images = `CSS .fg_Label:after {content:"";}
@@ -213,5 +212,5 @@ var tryTimeout = "Form frm '' server echo.php call receive"
 + "\nGET Time getSample.php?Type=Time every 60000"
 + "\nGET wField getITCite.php?CR every 9000"
 + "\nGet Image getImage.php every 11000"
-+ "\nB fg_Cancel &#x2718; width 45"
++ "\nB fg_Cancel &#x2718; width 40"
 
