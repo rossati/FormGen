@@ -1,5 +1,5 @@
 // ***************************************
-// FormGen JS sandbox 10 January 2026
+// FormGen JS sandbox 22 January 2026
 // El Condor - Condor Informatique - Turin
 // ***************************************
 var infoTypes = {
@@ -170,6 +170,7 @@ function insertRow(id,parm,form) {
 	var list = `
 B delete%n  \\x2718 call fGen.deleteWidget inline
 T attach%n File_%n after delete%n disabled width 40 value '${id.files[0].name}'
+H hidden%n %n
 T Comment%n '' width 35
 `
 	var idAfter = id.id

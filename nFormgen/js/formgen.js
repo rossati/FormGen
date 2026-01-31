@@ -1,11 +1,11 @@
 // jsForm generator ************************
-// formgen 0.4.4 15 January 2026
+// formgen 0.4.4 27 January 2026
 // free to use but no warranties
 // El Condor - Condor Informatique - Turin
 // *****************************************
 if (typeof(window.$) != "function") var $ = id => document.getElementById(id);  // wrap getElementById
 window.fGen = class fGen {
-	static version = "0.4.4 15 January 2026";
+	static version = "0.4.4 24 January 2027";
 	static formCount = 0;	// for form without name or popup form
 	static lengths = {S:150,T:20,C:0,L:0,CMB:0,R:0,B:80}	// if no length is provided
 	static createNode(tag,id,style) {
@@ -40,32 +40,30 @@ window.fGen = class fGen {
 	}
 	static createWidget(id,list) {
 		if ($(id)) {
-			new fGen("fg_Dummy",list)
-			$(id).form.appendChild(fGen.fragment.hiddensFieldSet)
-			console.log($(id).form.fg_jsForm)
-			fGen.fragment.querySelectorAll('*[id]').forEach((w) => {w.setAttribute("id",$(id).form.fg_jsForm.prefix+w.id);});
-			console.log(fGen.fragment.querySelectorAll('*[id]'))
-			var table = fGen.fragment.querySelector(".fg_Table")
+			new fGen("fg_Dummy",list,$(id).form.id)
+			var table = $("fg_Dummy").querySelector("table")
+			var formID = $("fg_Dummy").querySelector("form").id
 			if ($(id).closest("tr") != null) while (table.rows.length > 0) {
-				$(id).closest("tr").after(table.rows[table.rows.length-1])
-			}			
+				table.rows[table.rows.length-1].setAttribute("data-form",formID);
+				$(id).closest("tr").after(table.rows[table.rows.length-1]);
+			}
+			$("fg_Dummy").remove();			
 		} else console.log(id,"id non existent")
-	}
-	static deleteWidget = (idx,parm) => {
-		if (parm != undefined && parm != "") idx = parm;
+	}	
+	static deleteWidget = (idx,parm,frm) => {
+		if (parm) idx = parm;
+		else if (frm && frm[idx]) idx = frm.fg_jsForm.prefix+idx;
 		const id = $(idx);
-		if (id == null) console.log("Attempt to remove non existent id:",idx)
-		else {
+		if (id) {
 			if(id.nodeName == "FORM") id.remove()
 			else {
-				var frm = id.closest("tr").dataset.form
-				if (!frm) id.closest("tr").remove()
-				else document.querySelectorAll(`[data-form="${frm}"]`).forEach(item => {item.remove()});
+				var dsFrm = id.closest("tr").dataset.form
+				if (!dsFrm) id.closest("tr").remove()
+				else document.querySelectorAll(`[data-form="${dsFrm}"]`).forEach(item => {item.remove()});
 			}
-		}
+		} else console.log("Attempt to remove non existent id:",idx)
 	}
 	static getAddedWidgets = id => document.querySelector("#"+id).querySelectorAll('[data-form]')
-	static fragment = ""
 	static extractTokens(s, quotes) { // quotes true returns quotes
 		if (!quotes) var quotes = false
 		const reSplitTokens = /("[^"]*")|('[^']*')|(\S+)/g	// thank to Taky
@@ -85,7 +83,7 @@ window.fGen = class fGen {
 	}
 	static fg_alert = (name,parm) => {if (typeof parm === "object") parm = name;alert(fGen.translate(parm))}
 	static fg_enable = (name,target,frm) => {if (fGen.fieldExist(frm,target)) frm[target].disabled = false}
-	static fg_disable = (name,target,frm) => {console.log(frm,target);if (fGen.fieldExist(frm,target)) frm[target].disabled = true}
+	static fg_disable = (name,target,frm) => {if (fGen.fieldExist(frm,target)) frm[target].disabled = true}
 	static fg_switch = (name,target,frm) => {if (fGen.fieldExist(frm,target)) frm[target].disabled = !frm[target].disabled}
 	static fg_dictionary = {};
 	static fg_Set(rsp,frm,fld) {
@@ -135,19 +133,18 @@ window.fGen = class fGen {
 		if (isNaN(dragObj.startLeft)) dragObj.startLeft = 0;
 		if (isNaN(dragObj.startTop)) dragObj.startTop = 0;
 		var x = dragGo.bind(event,dragObj)
-		document.addEventListener("mousemove", x, true);// Capture mousemove and mouseup events on the page.
+		document.addEventListener("mousemove", x, true);// Capture mousemove and mouseup events on the page
 		document.addEventListener("mouseup", (id) => {delete fGen.dragObj[id];document.removeEventListener("mousemove", x, true)}, {once: true});
 		function dragGo(dragObj,event) {
-			var x = event.clientX + window.scrollX;		// Get cursor position respect to the page.
+			var x = event.clientX + window.scrollX;		// Get cursor position respect to the page
 			var y = event.clientY + window.scrollY;
 			if (dragObj.first) {
 				dragObj.first = false
 				dragObj.startLeft -= x
 				dragObj.startTop -= y
 			}
-			// Move drag element by the same amount the cursor has moved.
-			dragObj.elNode.style.left = (dragObj.startLeft + x) + "px";
-			dragObj.elNode.style.top = (dragObj.startTop  + y) + "px";
+			dragObj.elNode.style.left = (dragObj.startLeft + x) + "px";		// Move drag element by
+			dragObj.elNode.style.top = (dragObj.startTop  + y) + "px";		// the same amount the cursor has moved
 			event.preventDefault();
 		}
 	}
@@ -174,9 +171,9 @@ window.fGen = class fGen {
 		w = fGen.convertHex(w);
 	return (fGen.fg_dictionary[w] == undefined) ? w : fGen.fg_dictionary[w]
 }
-constructor(idDiv,param) {
+constructor(idDiv,param,idParent) {
 	fGen.formCount++
-	this.formGen(idDiv,param)
+	this.formGen(idDiv,param,idParent)
 }
 addControl(controls,name,control) {
 	if (!controls[name]) controls[name] = Array()
@@ -230,7 +227,10 @@ splitKeyValue(itms) {	// return array of items
 	}
 	return aRet;
 }
-formGen (idDiv,param) {
+formGen (idDiv,param,idParent) {
+	var jsForm = {static:0,server:"",call:"",eventOnStart:"",ID:"fg_form"+fGen.formCount,left:-1,title:"",target:"_blank",top:-1,popUp:false}
+	jsForm.prefix = idParent ? $(idParent).fg_jsForm.prefix : "";
+	jsForm.parent = idParent ? idParent : "";
 /* ************************* some functions *********************** */
 	function check(frm) {	// can control all form
 		var aErrors = [];
@@ -285,7 +285,7 @@ formGen (idDiv,param) {
 		events[name][events[name].length] = parms
 	}
 	function fg_handle(button,parm,frm) {	// send request
-		var jsForm = frm.fg_jsForm;
+		const jsForm = frm.fg_jsForm;
 		if (button != "fg_Cancel") {
 			var aErrors = check(frm);		// data control ******************
 			if (aErrors.length > 0)	return alert("Errors:\n"+aErrors.join("\n"));
@@ -313,7 +313,7 @@ formGen (idDiv,param) {
 		if (jsForm.static == 0 || button == "fg_Cancel" ) {	// clean
 			intervals.forEach((h) => clearInterval(h));
 			frm.remove()
-			$(frm.id+"fg_CSS").remove()
+			$(frm.fg_jsForm.prefix+"fg_CSS").remove()
 			if (jsForm.popUp) $(idDiv).remove()
 		} else if (jsForm.static == 2) {
 			setTimeout(function(){fGen.prototype.setDefaults(frm,0)},100);		// 1 static, 2 reset form
@@ -524,16 +524,14 @@ formGen (idDiv,param) {
 .fg_Slider {padding-left:5px;border:none;background:rgba(0,0,0,0)}
 .fg_UType {border:none;background:rgba(0,0,0,0)}
 .fg_alignAfter {display: grid;grid-template-columns: auto auto repeat(2,0.8rem);align-items: center;}`
-	var jsForm = {static:0,server:"",call:"",eventOnStart:"",ID:"fg_form"+fGen.formCount,left:-1,prefix:"",
-		title:"",target:"_blank",top:-1,popUp:false} // Form data
 	if (idDiv.trim() == "") idDiv = "fg_PopUp"+fGen.formCount;
 	if(!$(idDiv)) {	// div not present is create as PopUp
-		var l = document.body.appendChild(fGen.createNode('DIV',idDiv,"visibility:hidden"));
+		var l = document.body.appendChild(fGen.createNode('DIV',idDiv));
 		l.className = 'fg_PopUp';
 		styles += ".fg_PopUp {position:absolute}\n.fg_PopUp .fg_Title {cursor:move}"
 		jsForm.popUp = true
 	}
-	var hiddensFieldSet = fGen.createNode("span",idDiv+"fg_hiddens")
+	var hiddensFieldSet = fGen.createNode("span",{class:"fg_Hiddens"})
 	if (param == "" || !param) var param = "C '' Nodata!";
 	var aLists = {};			// Lists and combos array
 	var gets = {};				// GETs array
@@ -567,13 +565,13 @@ formGen (idDiv,param) {
 		var [type,name,label,...extra] = field;
 		if (type == "FORM") {
 			if (name != "" && $(name)) {
-				wdg[wdg.length] = `C '' "${name} the form ID exists" class fg_Error`
-				field[1] = ""
+				wdg[wdg.length] = `C '' "${name} the form ID exists" class fg_Error`;
+				field[1] = "";
 			}
 			jsForm.prefix = field[1]
 			if (field[1] == "") field[1] = jsForm.ID	// generated name
-			else jsForm.ID = field[1]
-			var extra = field.slice(2)
+			else jsForm.ID = field[1];
+			var extra = field.slice(2);
 			jsForm.server = getParms(extra,"server")
 			if (has(extra,"set")) getCallParms(["call","fGen.fg_Set "+getParms(extra,"set")],jsForm,wdg)
 			else getCallParms(extra,jsForm,wdg)	// extract call
@@ -668,12 +666,10 @@ formGen (idDiv,param) {
 	var prefix = jsForm.prefix
 	var formID = jsForm.ID
 	var tableHead = (jsForm.title != "") ? `<thead><tr><th colspan=2 id='${jsForm.ID}_Title' class='fg_Title'>${this.genImgTag(jsForm.title)}</td></tr></thead>` : ""
-	var tableCommon = ""
 	var tableBody = ""
 	var tableFoot = ""
 	var frm =  ""
-	var aWidgets = Object.keys(widgets);
-	
+	var aWidgets = Object.keys(widgets);	
 	storeDefaults(defaults)
 	for (i = 0;i < aWidgets.length;i++) {
 		var wdgTag = ""
@@ -694,8 +690,8 @@ formGen (idDiv,param) {
 			if (tabCount > 0) {
 				tableBody += `${frm}<tr><td colspan=2 style='text-align:center'>${Object.values(bottomTabButtons).join("")}</td></tr></tbody>`;
 			} else {
-				if (frm != "") tableCommon = `<tbody>${frm}</tbody>`	// common part of all tabs
-				tableBody = `<tbody><tr><td colspan=2 id='${formID+"fg_ButtonsTab"}'></tr></td></tbody>`
+				if (frm != "") var tableCommon = `<tbody>${frm}</tbody>`	// common part of all tabs
+				tableBody = `<tbody><tr><td colspan=2 id='${prefix+"fg_ButtonsTab"}'></tr></td></tbody>`
 			}
 			if (field[3] != "") divLabel = this.genImgTag(field[3])	// there is title
 			frm = `<tbody id='${IDName}' class='fg_Tab'>\n<tr><td class='fg_TabTitle' colspan='3' id='${widget.ID}_Title'>${divLabel}</td></tr>`
@@ -758,7 +754,7 @@ formGen (idDiv,param) {
 				var parm2 = has(extra,"exposed") ? 1 : (has(extra,"group") ? -1 : 0)
 				if (has(extra,"link")) fg_setEvent(name,{event:"change",call:this.fg_link,field:name,parm:getParms(extra,'link',""),parm2:parm2})
 			} else {
-				wdgTag = `<input name='${name}' id='${IDName}' list='${IDName + "_List"}'/>`
+				wdgTag = `<input type='text' name='${name}' id='${IDName}' list='${IDName + "_List"}'/>`
 				+ `<datalist name='${name}' id='${IDName + "_List"}'>${this.createOptions(IDName + "_List",extra[0])}</datalist>`
 				wdgTag += this.createErase(IDName,widget.default);
 			}
@@ -820,7 +816,7 @@ formGen (idDiv,param) {
 		if (widget.place != "" && !widgets[widget.placeField]) {
 				widget.place = ""
 				console.log("field",widget.placeField,"doesn't exists")
-				wdgTag = "*" + wdgTag
+				wdgTag = "*" + wdgTag;
 		}
 		if (wdgTag.startsWith("*")) frm += "\n<tr><td colspan='3'>" + wdgTag.substring(1)	// no label (inline buttons and comments)
 		else if (widget.place == "" && type != "B") { // no after|below
@@ -831,15 +827,15 @@ formGen (idDiv,param) {
 	}
 	if (tabCount > 0) {
 		tableBody += `${frm}<tr><td colspan=2 style='text-align:center'>${Object.values(bottomTabButtons).join("")}</td></tr></tbody>`;
-	} else tableCommon = "<tbody>"+frm+"</tbody>"
-	if (Object.keys(bButtons).length > 0 && idDiv != "fg_Dummy") {		// Object.keys(hash_table).length
+	} else var tableCommon = "<tbody>"+frm+"</tbody>"
+	if (Object.keys(bButtons).length > 0 && idDiv != "fg_Dummy") {
 		tableFoot = `<tfoot><tr><td colspan=2 class='fg_Buttons' id="${prefix}fg_Buttons">`
 		Object.keys(bButtons).forEach(f => tableFoot += createButton(bButtons[f],0));
 		tableFoot += `</td></tr></tfoot>`
 	}
 	$(idDiv).innerHTML = `
 <FORM id='${formID}' class='fg_Form'>
-<table class='fg_Table' id='${prefix+"_Table"}' style='visibility:hidden'>
+<table ${idDiv != "fg_Dummy" ? "class='fg_Table' id='" + prefix+"_Table" + "'": ""} style='visibility:hidden'>
 ${tableHead}
 ${tableCommon}
 ${tableBody}
@@ -879,12 +875,12 @@ ${tableFoot}
 			if (type == "TAB") {
 				var buttonTabID = prefix + name + "_Tab"
 				var b = `<button type='button' name='${name}' id='${buttonTabID}' class='fg_ButtonTab'>${fGen.translate(label)}</button>`
-				$(formID+"fg_ButtonsTab").innerHTML += b
+				$(prefix+"fg_ButtonsTab").innerHTML += b
 				var tab = $(prefix + name);
 				if (iTab++ < 1) {
 					var firstTabID = tab
-					$(formID+"fg_ButtonsTab").addEventListener("click",fg_handleTab.bind(event))
-					$(formID+"_Table").style.width = `${tab.offsetWidth}px`
+					$(prefix+"fg_ButtonsTab").addEventListener("click",fg_handleTab.bind(event))
+					$(prefix+"_Table").style.width = `${tab.offsetWidth}px`
 				} else {
 					$(prefix + name + "_Tab").style.color = "#aaa"
 					tab.style.cssText = "display:none;"
@@ -894,19 +890,17 @@ ${tableFoot}
 	})
 	//	 add hidden	****************************
 	Object.keys(hiddens).forEach(f => {
-		var hidden = hiddensFieldSet.appendChild(fGen.createNode("input",{id:prefix+f,type:"hidden",name:f,value:hiddens[f]}))
-		if (idDiv == "fg_Dummy") hidden.setAttribute("data-form",jsForm.ID);
+		hiddensFieldSet.appendChild(fGen.createNode("input",{id:prefix+f,type:"hidden",name:f,value:hiddens[f]}))		
 	})
 	// add pointers	****************************
 	var form = $(formID);
-	if (iTab > 0) form.style.width = $(formID+"_Table").offsetWidth+"px";
+	if (iTab > 0) form.style.width = $(prefix+"_Table").offsetWidth+"px";
 	form.fg_check = check.bind(this)
 	form.fg_createOptions = this.createOptions.bind(this)
 	form.fg_formFields = formFields.bind(this)
 	form.fg_jsForm = jsForm
 	form.fg_setValue = setValue.bind(this)
 	form.fg_widgets = widgets
-	form.hiddensFieldSet = hiddensFieldSet
 	if (lone == 1 && jsForm.static != 1 && idDiv != "fg_Dummy") {	// event for lone widgets (no buttons)
 		var type = widgets[loneField][0];
 		if (type == "CMB" || type == "DATE" || jsForm.encoding == "F") fg_setEvent(loneField,{event:"change",call:fg_handle,field:loneField})
@@ -916,6 +910,7 @@ ${tableFoot}
 		}
 	} else form.addEventListener("keydown", function(event) {if (event.key === "Enter") event.preventDefault()}); 	// Prevent form submission
 	// add events ******************************
+	const eventForm = jsForm.parent ? $(jsForm.parent) : form;
 	Object.keys(events).forEach(f => {
 		var eField = $(prefix+f)
 		if (widgets[f] && widgets[f][0] == "S") eField = $("s_"+eField)
@@ -924,24 +919,24 @@ ${tableFoot}
 			events[f].forEach((el) => {
 				var {server:fnz = "",call:jsFnz = "",field:fieldName = "",parm,parm2,event} = el
 				if (fnz != "") {	// server function (URI)
-					if (fnz == "submit") {
-						if (event == "enter") eField.addEventListener("keydown",fg_handleEnter.bind(event,form,fieldName))
-						else eField.addEventListener(event,fg_handle.bind(event,fieldName,"",form))
+				if (fnz == "submit") {
+						if (event == "enter") eField.addEventListener("keydown",fg_handleEnter.bind(event,eventForm,fieldName))
+						else eField.addEventListener(event,fg_handle.bind(event,fieldName,"",eventForm))
 					} else {
-						eField.addEventListener(event,fg_handleAjax.bind(event,fnz,form,jsFnz,parm,parm2))
+						eField.addEventListener(event,fg_handleAjax.bind(event,fnz,eventForm,jsFnz,parm,parm2))
 					}
 				} else {	// only javascript function
-					if (event == "enter") eField.addEventListener("keydown",fg_handleEnter.bind(event,form,fieldName,jsFnz,parm))
-					else eField.addEventListener(event,jsFnz.bind(event,fieldName,parm,form))
+					if (event == "enter") eField.addEventListener("keydown",fg_handleEnter.bind(event,eventForm,fieldName,jsFnz,parm))
+					else eField.addEventListener(event,jsFnz.bind(event,fieldName,parm,eventForm));
 				}
 			})
 		}
 	})
+	form.appendChild(hiddensFieldSet)
 	if (idDiv == "fg_Dummy") {
-		form.prepend(hiddensFieldSet)
+		form.querySelector(".fg_Hiddens").setAttribute("data-form",jsForm.ID);
 		fGen.prototype.setDefaults(form,0);
-		fGen.fragment = form;
-		return
+		return;
 	}
 /********************  handle GET pseudo type ********************/
 	const tasks = Object.keys(gets).map(el => {
@@ -955,20 +950,20 @@ ${tableFoot}
 		setTimeout((firstTabID) => {			
 			if (jsForm.popUp) {
 				fGen.setObjPosition($(idDiv),jsForm.top,jsForm.left)
-				$(jsForm.ID).addEventListener("mousedown", fGen.dragStart.bind(null,idDiv))
+				const moveId = $(jsForm.ID+"_Title") ? jsForm.ID+"_Title" : idDiv;
+				$(moveId).addEventListener("mousedown", fGen.dragStart.bind(null,idDiv))
 			}
-			$(formID+"_Table").style.visibility = "visible"
-			if (firstTabID != null) {
-				$(formID+"_Table").style.height = `${$(formID+"_Table").offsetHeight}px`
+			$(prefix+"_Table").style.visibility = "visible"
+			if (firstTabID) {
+				$(prefix+"_Table").style.height = `${$(prefix+"_Table").offsetHeight}px`
 				firstTabID.style.cssText = "visibility:visible";
 			}
-			var firstField = document.querySelector("#"+formID).querySelector("textarea:not([readonly]),input[type=text]:not([readonly])")
-			if (firstField !== null) firstField.focus()
+			const inputs = document.querySelectorAll('form input[type="text"]:not([readonly]), form textarea:not([readonly]),form input[type="password"]');
+			if (inputs.length > 0) inputs[0].focus();
 		}, 500)
-		form.prepend(hiddensFieldSet);
 		fGen.prototype.setDefaults(form,0);
 		if (jsForm.eventOnStart != "") window[jsForm.eventOnStart](form)
-		var styleTag = document.head.appendChild(fGen.createNode("style",formID+"fg_CSS"))
+		var styleTag = document.head.appendChild(fGen.createNode("style",prefix+"fg_CSS"))
 		styleTag.type = "text/css";
 		styleTag.innerText = styles;
 		});
