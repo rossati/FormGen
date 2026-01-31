@@ -23,4 +23,4 @@ Extra field(s)are attributes that depends of the control type.
 The Type is indifferent to the case:
 Buttons, radio buttons, comments, check boxes, combo box and lists, images, texts, sliders and hidden fields.
   
-See the documentation 
+See the documentation <b>newJavaScriptFormGen.pdf</b>.
